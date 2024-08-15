@@ -7,16 +7,20 @@ export const taskQueue: ITask[] = [
     },
     {
         project: 'deploy-lanmaoly-cloud-sso-olading-front',
-        environment: 'deploy'
-    },
-    {
-        project: 'qa-salary-front',
-        environment: 'qa'
-    },
-    {
-        project: 'deploy-lanmaoly-cloud-salary-front',
-        environment: 'deploy'
-    },
+        environment: 'deploy',
+        gitOptions: {
+            env: '114',
+            branch:'cgb/2.34'
+        }
+    },  
+    // {
+    //     project: 'qa-salary-front',
+    //     environment: 'qa'
+    // },
+    // {
+    //     project: 'deploy-lanmaoly-cloud-salary-front',
+    //     environment: 'deploy'
+    // },
   
  
     // {
