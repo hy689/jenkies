@@ -7,22 +7,22 @@ export class JenkinsService {
     constructor(private readonly httpService: HttpService) { }
 
     async triggerBuild(project: string, env: string): Promise<any> {
-        return await this.request(`http://172.19.60.75:8080/job/${env}/job/${project}/build?delay=0sec`);
+        return await this.request(`https://jenkins.olading.com/job/${env}/job/${project}/build?delay=0sec`);
     }
 
-    // 查看队列状态
-    async getQueueInfo(project: string, env: string): Promise<any> {
-        return await this.request(`http://172.19.60.75:8080/job/${env}/job/${project}/wfapi/runs?since=%23110&fullStages=true&_=1723615697719`);
+    // 查看最新id
+    async getLastBuildId(project: string, env: string): Promise<any> {
+        return await this.request(`https://jenkins.olading.com/job/${env}/job/${project}/lastBuild/buildNumber?pretty=true`);
     }
 
     // 查看构建状态
     async getRunTaskStatus(project: string, env: string, buildId: string): Promise<any> {
-        return await this.request(`http://172.19.60.75:8080/job/${env}/job/${project}/${buildId}/execution/node/8/wfapi/describe?_=${new Date().getTime()}`);
+        return await this.request(`https://jenkins.olading.com/job/${env}/job/${project}/${buildId}/api/json?pretty=true`);
     }
 
     // 查看构建日志
     async getBuildLog(project: string, env: string, buildId: string): Promise<any> {
-        return await this.request(`http://172.19.60.75:8080/job/${env}/job/${project}/${buildId}/console`, 'get');
+        return await this.request(`https://jenkins.olading.com/job/${env}/job/${project}/${buildId}/logText/progressiveText?pretty=true`);
     }
 
     private async request(url: string, method?: 'get' | 'post'): Promise<any> {
@@ -35,27 +35,18 @@ export class JenkinsService {
 
         let res
         try {
+            res = await firstValueFrom(this.httpService.post(url, {}, {
+                headers: {
+                    cookie: 'jenkins-timestamper-offset=-28800000; JSESSIONID.35973b47=node07rdlucvcvtvl1o7o0dgyvfrup660.node0; remember-me=ZHVob25neXU6MTcyNjcyNjYyMDk5OTplNDc2ZjIxMzlmOWJhZGE4YTM3Y2ZmNWMxYTA1Y2IzNGJjYWI4ZGNkNTM2MzkzZGQxOTA3YjFiNGUwYmIwYTc3; screenResolution=1707x960',
+                    'jenkins-crumb':'07ffb3ff95fc350cf8f915c23b78d370691b72e5bfbfc3c915b7d81b4586b776'
 
-            if (method === 'get') {
-                res = await firstValueFrom(this.httpService.get(url, {
-                    headers: {
-                        cookie: 'screenResolution=1707x960; screenResolution=1707x960; jenkins-timestamper-offset=-28800000; screenResolution=1707x960; ACEGI_SECURITY_HASHED_REMEMBER_ME_COOKIE=ZHVob25neXU6MTcyNDgxNTc0MzI2NzplNWUwMTg3ZTViOTY0MGIyYjNkYjQ3MTI3ZDQwYzMyODZkNWEzZGJhY2NhMzI3MDA4MWI3MDM0NWVmMGFkYmFh; JSESSIONID.922e6f7f=node08s4tukg8l0lt4aidsniyr7c51502.node0'
-                    }
-                }))
-            } else {
-                res = await firstValueFrom(this.httpService.post(url, {}, {
-                    headers: {
-                        cookie: 'screenResolution=1707x960; screenResolution=1707x960; jenkins-timestamper-offset=-28800000; screenResolution=1707x960; ACEGI_SECURITY_HASHED_REMEMBER_ME_COOKIE=ZHVob25neXU6MTcyNDgxNTc0MzI2NzplNWUwMTg3ZTViOTY0MGIyYjNkYjQ3MTI3ZDQwYzMyODZkNWEzZGJhY2NhMzI3MDA4MWI3MDM0NWVmMGFkYmFh; JSESSIONID.922e6f7f=node08s4tukg8l0lt4aidsniyr7c51502.node0'
-                    }
-                }))
-            }
-
+                }
+            }))
         } catch (error) {
 
             console.log(error)
             throw new Error(error)
         }
-
         return res
     }
 }

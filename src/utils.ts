@@ -3,7 +3,7 @@
 export const getLogVersion = (log: string):string => {
     const str = log
 
-    const regex = /镜像名称: (.*?)\n/;
+    const regex = /镜像名称: (.*)/;
     const match = str.match(regex);
 
     if (match && match[1]) {

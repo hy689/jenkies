@@ -12,27 +12,29 @@ export class AppService {
 
   }
   async test(): Promise<void> {
+    
     const fileFolder = getLocalFileFolderPath('46')
     const fileName = getLocalFileName('deploy-lanmaoly-cloud-salary-front')
-    const branch = 'master'
+    const ymlText = await fs.readFile(fileFolder + fileName, 'utf-8')
+    const newYmlText = ymlText.replace(/image: (.*)/g, `image: dafsdjfsdkf`)
+    await fs.writeFile(fileFolder + fileName, newYmlText)
+    // try {
+    //   process.chdir(fileFolder);
+    //   console.log(`process.chdir(${fileFolder}); 命令执行成功`);
 
-    try {
-      process.chdir(fileFolder);
-      console.log(`process.chdir(${fileFolder}); 命令执行成功`);
+    //   execSync('git fetch');
+    //   console.log('git fetch 命令执行成功');
 
-      execSync('git fetch');
-      console.log('git fetch 命令执行成功');
+    //   execSync(`'git checkout ${branch}'`);
+    //   console.log(`git checkout ${branch} 命令执行成功`);
 
-      execSync(`'git checkout ${branch}'`);
-      console.log(`git checkout ${branch} 命令执行成功`);
-
-      execSync('git pull');
-      console.log('git pull 命令执行成功');
+    //   execSync('git pull');
+    //   console.log('git pull 命令执行成功');
 
 
-    } catch (error) {
-      console.error(`执行命令时出错: ${error.message}`);
-    }
+    // } catch (error) {
+    //   console.error(`执行命令时出错: ${error.message}`);
+    // }
   }
   async start(): Promise<void> {
 
@@ -46,38 +48,34 @@ export class AppService {
         throw new Error(`${project}项目在${environment}启动构建失败`)
       }
       console.log(`${project}项目在${environment}启动构建`)
+      const runTaskRes = await this.jenkinService.getLastBuildId(project, environment)
 
-      const runTaskRes = await this.jenkinService.getQueueInfo(project, environment)
-      const runTask = runTaskRes.data as { id: string }[]
-      if (runTask.length <= 0) {
+      if (!runTaskRes.data) {
         throw new Error(`无可执行的任务`)
       }
 
-      const runTaskId = runTask[0].id
-      await new Promise(resolve => setTimeout(resolve, 8000))
+      const runTaskId = runTaskRes.data
+
       //轮询调用 getRunTaskStatus 接口 2秒一次 阻塞下面代码轮询不完成不继续执行
       while (true) {
       
         const runTaskStatus = await this.jenkinService.getRunTaskStatus(project, environment, runTaskId)
-        if (runTaskStatus.data.status === 'IN_PROGRESS') {
+        if (runTaskStatus.data.building) {
           console.log(`${project}项目在${environment}构建中 ${runTaskId}`)
+          await new Promise(resolve => setTimeout(resolve, 8000))
+          continue
         }
 
-        if (runTaskStatus.data.status === 'SUCCESS') {
+        if (runTaskStatus.data.result === 'SUCCESS') {
           console.log(`${project}项目在${environment}构建成功 ${runTaskId}`)
-          await new Promise(resolve => setTimeout(resolve, 8000))
           break
         }
 
-        if (runTaskStatus.data.status === 'FAILED') {
-          throw new Error(`${project}项目在${environment}构建失败 ${runTaskId} 请去网页查看原因`)
-        }
-        await new Promise(resolve => setTimeout(resolve, 4000))
+        throw new Error(`${project}项目在${environment}构建失败 ${runTaskId} 请去网页查看原因`)
       }
 
       if (environment === 'deploy') {
         console.log(`${project}准备获取镜像版本 请耐心等待！`)
-        await new Promise(resolve => setTimeout(resolve, 10000))
         const buildLog = await this.jenkinService.getBuildLog(project, environment, runTaskId)
         const image = getLogVersion(buildLog.data)
         if (image.length <= 0) {
@@ -96,9 +94,6 @@ export class AppService {
             process.chdir(fileFolder);
             console.log(`process.chdir(${fileFolder}); 命令执行成功`);
 
-            execSync('git pull', { stdio: 'inherit' });
-            console.log('git pull 命令执行成功');
-
             execSync(`git checkout ${branch}`, { stdio: 'inherit' });
             console.log(`git checkout ${branch} 命令执行成功`);
 
@@ -111,7 +106,7 @@ export class AppService {
           }
 
           const ymlText = await fs.readFile(fileFolder + fileName, 'utf-8')
-          const newYmlText = ymlText.replace(/image: [^\n]+/, `image: ${image}`)
+          const newYmlText = ymlText.replace(/image: (.*)/g, `image: ${image}`)
 
           if (newYmlText !== ymlText) {
             try {
@@ -120,6 +115,8 @@ export class AppService {
             } catch (error) {
               throw new Error(`${error} \n ${project}项目在${environment}修改镜像版本失败`)
             }
+          }else{
+            throw new Error(`${project}项目在${environment} 镜像号一致`)
           }
 
           try {
